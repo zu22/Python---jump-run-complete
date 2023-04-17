@@ -1,0 +1,185 @@
+import pygame
+import random
+
+pygame.init()
+
+screen_breite = 1200
+screen_hoehe = 700
+
+clock = pygame.time.Clock()
+screen = pygame.display.set_mode((screen_breite, screen_hoehe))
+pygame.display.set_caption("jump & run")
+
+character_right = ["",""]
+character_right[0] = pygame.image.load("character_right.PNG").convert_alpha()
+character_right[1] = pygame.image.load("character_right_2.PNG").convert_alpha()
+frame = 0
+character_left = pygame.image.load("character_left.PNG").convert_alpha()
+
+Level_2 = False
+background = pygame.image.load("background_scrolling.png")
+
+
+background_scrolling_1_x = 0
+background_scrolling_2_x = -screen_breite
+background_scrolling_y = 0
+
+character_x = 250
+character_y = 330
+
+jumpCount = 0
+jumpMax = 80
+
+bullet_breite = 50
+bullet_hoehe = 30
+bullet_image = pygame.image.load("bullet.PNG").convert_alpha()
+bullet_image = pygame.transform.scale(bullet_image, (bullet_breite, bullet_hoehe))
+bullet_x = 0
+bullet_y = 0
+bullet_x_bewegung = 15
+bullet_status = False
+
+gegner_breite = 100
+gegner_hoehe = 200
+gegner_1 = pygame.image.load("gegner_1.PNG").convert_alpha()
+gegner_1 = pygame.transform.scale(gegner_1, (gegner_breite, gegner_hoehe))
+gegner_x = 0
+gegner_y = 0
+gegnerbewegung = 10
+
+def gegner_nummer_1(gegner_x, gegner_y):
+    screen.blit(gegner_1, (gegner_x, gegner_y))
+
+def bullet_fliegt(bullet_x, bullet_y):
+    screen.blit(bullet_image, (bullet_x, bullet_y))
+
+def kollision(gegner_x, gegner_y, bullet_x, bullet_y):
+    if bullet_x > gegner_x and bullet_y  > gegner_y and bullet_y < gegner_y + gegner_hoehe - bullet_hoehe:
+        return True
+    else:
+        return False
+
+hit = pygame.mixer.Sound("hit.mp3")
+jump = pygame.mixer.Sound("jump.mp3")
+shot = pygame.mixer.Sound("shot.mp3")
+
+pygame.mixer.music.load("background_music.mp3")
+pygame.mixer.music.play(-1, 0.0)
+pygame.mixer.music.set_volume(.7)
+
+points = 0
+
+def pause():
+    loop=1
+    schrift = pygame.font.SysFont("Sans", 70, True, False)
+    text = schrift.render(" -pause- ", True, (250,250,250), (100,100,100))
+    screen.blit(text, [450,150])
+
+    schrift = pygame.font.SysFont("Sans", 40, True, False)
+    text = schrift.render(" press p to continue ", True, (200,200,200), (100,100,100))
+    screen.blit(text, [410,240])
+    while loop:
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key==pygame.K_p:
+                    loop=0
+        pygame.display.update()
+        clock.tick()
+
+run = True
+while run:
+    pygame.time.delay(0)
+    clock.tick(60)
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            run = False
+
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_s and bullet_status == False:
+                bullet_status = True
+                bullet_x = character_x + 190
+                bullet_y = character_y + 140
+                pygame.mixer.Sound.play(shot)
+            if event.key == pygame.K_p:
+                pause()
+
+
+    keys = pygame.key.get_pressed()
+
+    if keys[pygame.K_LEFT]:
+        background_scrolling_1_x += 4
+        background_scrolling_2_x += 4
+    if keys[pygame.K_RIGHT]:
+        background_scrolling_1_x += -4
+        background_scrolling_2_x += -4
+
+    if background_scrolling_1_x == -screen_breite:
+        background_scrolling_1_x = 0
+    if background_scrolling_2_x < -screen_breite:
+        background_scrolling_2_x = screen_breite
+    if background_scrolling_1_x == screen_breite:
+        background_scrolling_1_x = 0
+    if background_scrolling_2_x == 0:
+        background_scrolling_2_x = -screen_breite
+
+    background = pygame.transform.scale(background, (screen_breite, screen_hoehe))
+    screen.blit(background, (background_scrolling_1_x, background_scrolling_y))
+
+    background = pygame.transform.scale(background, (screen_breite, screen_hoehe))
+    screen.blit(background, (background_scrolling_2_x, background_scrolling_y))
+
+    if keys[pygame.K_LEFT]:
+        character_left = pygame.transform.scale(character_left, (300, 300))
+        screen.blit(character_left, (character_x, character_y))
+
+    elif keys[pygame.K_RIGHT]:
+        frame = 1
+        character_right[frame] = pygame.transform.scale(character_right[frame], (300, 300))
+        screen.blit(character_right[frame], (character_x, character_y))
+        frame = 0
+
+    elif not keys[pygame.K_LEFT] or keys[pygame.K_RIGHT]:
+        character_right[frame] = pygame.transform.scale(character_right[frame], (300, 300))
+        screen.blit(character_right[frame], (character_x, character_y))
+
+    if keys[pygame.K_SPACE] and character_y > 30:
+        character_y -= 5
+        if character_y > 320:
+            pygame.mixer.Sound.play(jump)
+    elif character_y < 330:
+        character_y += 5
+
+    if bullet_status == True:
+        bullet_x += bullet_x_bewegung
+        bullet_fliegt(bullet_x, bullet_y)
+
+    if bullet_x > screen_breite or kollision(gegner_x, gegner_y, bullet_x, bullet_y) == True:
+        bullet_status = False
+        if kollision(gegner_x, gegner_y, bullet_x, bullet_y) == True:
+            points +=1
+            if points > 2:
+                Level_2 = True
+
+    if kollision(gegner_x, gegner_y, bullet_x, bullet_y) == True:
+        pygame.mixer.Sound.play(hit)
+
+    if gegner_x < -100 or kollision(gegner_x, gegner_y, bullet_x, bullet_y) == True:
+        gegner_x = screen_breite
+        gegner_y = random.randint(50, screen_hoehe - 210)
+
+    gegner_x -= gegnerbewegung
+    gegner_nummer_1(gegner_x, gegner_y + random.randint(10, 30))
+
+    schrift = pygame.font.SysFont("Sans", 30, True, False)
+    text = schrift.render("points: " + str(points), True, (200,200,200))
+    screen.blit(text, [60,25])
+
+    if Level_2 == True:
+        background = pygame.image.load("background_scrolling_level_2.png")
+
+    pygame.display.flip()
+
+    clock.tick()
+
+pygame.quit()
